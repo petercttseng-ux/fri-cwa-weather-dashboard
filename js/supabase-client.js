@@ -12,17 +12,30 @@ function resetSupabase() { _sb = null; }
 /* ---- 寫入雨量資料 ---- */
 async function upsertRainfallRecords(rows) {
   const sb = getSupabase(); if (!sb) return { error: 'Supabase 未設定' };
-  const { error } = await sb.from('rainfall_observations')
-    .upsert(rows, { onConflict: 'station_id,obs_time', ignoreDuplicates: true });
-  return { error };
+  /* 分批寫入，每批 200 筆，避免 payload 過大 */
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await sb.from('rainfall_observations')
+      .upsert(rows.slice(i, i + 200), {
+        onConflict: 'station_id,obs_time',
+        ignoreDuplicates: true,
+      });
+    if (error) return { error };
+  }
+  return { error: null };
 }
 
 /* ---- 寫入氣象資料 ---- */
 async function upsertWeatherRecords(rows) {
   const sb = getSupabase(); if (!sb) return { error: 'Supabase 未設定' };
-  const { error } = await sb.from('weather_observations')
-    .upsert(rows, { onConflict: 'station_id,obs_time', ignoreDuplicates: true });
-  return { error };
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await sb.from('weather_observations')
+      .upsert(rows.slice(i, i + 200), {
+        onConflict: 'station_id,obs_time',
+        ignoreDuplicates: true,
+      });
+    if (error) return { error };
+  }
+  return { error: null };
 }
 
 /* ---- 查詢資料庫狀態 ---- */

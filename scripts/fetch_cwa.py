@@ -95,8 +95,11 @@ def parse_weather(j):
 def upsert_chunks(table, rows, chunk=300):
     total = 0
     for i in range(0, len(rows), chunk):
-        res = sb.table(table).upsert(rows[i:i+chunk], on_conflict='station_id,obs_time',
-                                      ignore_duplicates=True).execute()
+        # on_conflict must match the exact UNIQUE constraint column list
+        sb.table(table).upsert(
+            rows[i:i+chunk],
+            on_conflict='station_id,obs_time',
+        ).execute()
         total += len(rows[i:i+chunk])
         log.info(f'  {table}: inserted chunk {i//chunk+1}, cumulative {total}')
     return total
