@@ -1,106 +1,76 @@
 -- ================================================================
 -- FRI 氣象儀表板 — Supabase 資料表初始化 SQL
 -- 請於 Supabase Dashboard > SQL Editor 執行
--- 可安全重複執行（所有語句均加 IF NOT EXISTS 保護）
+--
+-- ⚠ 首次執行：直接執行全部
+-- ⚠ 若之前已執行過且遇到錯誤：
+--   先執行 Step 0（刪除舊表），再執行 Step 1~4
 -- ================================================================
 
--- ── 雨量觀測資料表 ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS rainfall_observations (
-  id                BIGSERIAL PRIMARY KEY,
-  station_id        TEXT NOT NULL,
+-- ── Step 0: 清除舊表（若之前建立有誤請先執行此段）───────────────
+DROP TABLE IF EXISTS rainfall_observations CASCADE;
+DROP TABLE IF EXISTS weather_observations  CASCADE;
+
+-- ── Step 1: 建立雨量觀測資料表 ──────────────────────────────────
+CREATE TABLE rainfall_observations (
+  id                BIGSERIAL         PRIMARY KEY,
+  station_id        TEXT              NOT NULL,
   station_name      TEXT,
   county_name       TEXT,
   town_name         TEXT,
-  latitude          FLOAT,
-  longitude         FLOAT,
-  altitude          FLOAT,
-  obs_time          TIMESTAMPTZ NOT NULL,
-  now_precipitation FLOAT,
-  past_10min        FLOAT,
-  past_1hr          FLOAT,
-  past_3hr          FLOAT,
-  past_6hr          FLOAT,
-  past_12hr         FLOAT,
-  past_24hr         FLOAT,
-  past_2days        FLOAT,
-  past_3days        FLOAT,
-  created_at        TIMESTAMPTZ DEFAULT NOW()
+  latitude          DOUBLE PRECISION,
+  longitude         DOUBLE PRECISION,
+  altitude          DOUBLE PRECISION,
+  obs_time          TIMESTAMPTZ       NOT NULL,
+  now_precipitation DOUBLE PRECISION,
+  past_10min        DOUBLE PRECISION,
+  past_1hr          DOUBLE PRECISION,
+  past_3hr          DOUBLE PRECISION,
+  past_6hr          DOUBLE PRECISION,
+  past_12hr         DOUBLE PRECISION,
+  past_24hr         DOUBLE PRECISION,
+  past_2days        DOUBLE PRECISION,
+  past_3days        DOUBLE PRECISION,
+  created_at        TIMESTAMPTZ       DEFAULT NOW(),
+  CONSTRAINT rainfall_observations_station_id_obs_time_key
+    UNIQUE (station_id, obs_time)
 );
 
--- 唯一約束（分離建立，避免 IF NOT EXISTS 跳過）
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'rainfall_observations_station_id_obs_time_key'
-      AND conrelid = 'rainfall_observations'::regclass
-  ) THEN
-    ALTER TABLE rainfall_observations
-      ADD CONSTRAINT rainfall_observations_station_id_obs_time_key
-      UNIQUE (station_id, obs_time);
-  END IF;
-END $$;
-
--- ── 氣象觀測資料表 ──────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS weather_observations (
-  id                BIGSERIAL PRIMARY KEY,
-  station_id        TEXT NOT NULL,
+-- ── Step 2: 建立氣象觀測資料表 ──────────────────────────────────
+CREATE TABLE weather_observations (
+  id                BIGSERIAL         PRIMARY KEY,
+  station_id        TEXT              NOT NULL,
   station_name      TEXT,
   county_name       TEXT,
   town_name         TEXT,
-  latitude          FLOAT,
-  longitude         FLOAT,
-  altitude          FLOAT,
-  obs_time          TIMESTAMPTZ NOT NULL,
+  latitude          DOUBLE PRECISION,
+  longitude         DOUBLE PRECISION,
+  altitude          DOUBLE PRECISION,
+  obs_time          TIMESTAMPTZ       NOT NULL,
   weather           TEXT,
-  precipitation     FLOAT,
-  wind_direction    FLOAT,
-  wind_speed        FLOAT,
-  air_temperature   FLOAT,
-  relative_humidity FLOAT,
-  air_pressure      FLOAT,
-  uv_index          FLOAT,
-  peak_gust_speed   FLOAT,
-  created_at        TIMESTAMPTZ DEFAULT NOW()
+  precipitation     DOUBLE PRECISION,
+  wind_direction    DOUBLE PRECISION,
+  wind_speed        DOUBLE PRECISION,
+  air_temperature   DOUBLE PRECISION,
+  relative_humidity DOUBLE PRECISION,
+  air_pressure      DOUBLE PRECISION,
+  uv_index          DOUBLE PRECISION,
+  peak_gust_speed   DOUBLE PRECISION,
+  created_at        TIMESTAMPTZ       DEFAULT NOW(),
+  CONSTRAINT weather_observations_station_id_obs_time_key
+    UNIQUE (station_id, obs_time)
 );
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'weather_observations_station_id_obs_time_key'
-      AND conrelid = 'weather_observations'::regclass
-  ) THEN
-    ALTER TABLE weather_observations
-      ADD CONSTRAINT weather_observations_station_id_obs_time_key
-      UNIQUE (station_id, obs_time);
-  END IF;
-END $$;
+-- ── Step 3: 效能索引 ─────────────────────────────────────────────
+CREATE INDEX idx_rainfall_obs_time ON rainfall_observations(obs_time DESC);
+CREATE INDEX idx_rainfall_county   ON rainfall_observations(county_name);
+CREATE INDEX idx_rainfall_town     ON rainfall_observations(town_name);
+CREATE INDEX idx_weather_obs_time  ON weather_observations(obs_time DESC);
+CREATE INDEX idx_weather_county    ON weather_observations(county_name);
 
--- ── 效能索引 ────────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_rainfall_obs_time ON rainfall_observations(obs_time DESC);
-CREATE INDEX IF NOT EXISTS idx_rainfall_county   ON rainfall_observations(county_name);
-CREATE INDEX IF NOT EXISTS idx_rainfall_town     ON rainfall_observations(town_name);
-CREATE INDEX IF NOT EXISTS idx_weather_obs_time  ON weather_observations(obs_time DESC);
-CREATE INDEX IF NOT EXISTS idx_weather_county    ON weather_observations(county_name);
-
--- ── Row Level Security ──────────────────────────────────────────
+-- ── Step 4: Row Level Security（允許匿名讀寫）────────────────────
 ALTER TABLE rainfall_observations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE weather_observations  ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'rainfall_observations' AND policyname = 'anon_all'
-  ) THEN
-    EXECUTE 'CREATE POLICY anon_all ON rainfall_observations FOR ALL USING (true) WITH CHECK (true)';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'weather_observations' AND policyname = 'anon_all'
-  ) THEN
-    EXECUTE 'CREATE POLICY anon_all ON weather_observations FOR ALL USING (true) WITH CHECK (true)';
-  END IF;
-END $$;
+CREATE POLICY anon_all ON rainfall_observations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON weather_observations  FOR ALL USING (true) WITH CHECK (true);
