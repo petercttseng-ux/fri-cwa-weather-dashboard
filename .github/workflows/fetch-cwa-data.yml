@@ -1,0 +1,42 @@
+name: 每小時自動抓取 CWA 氣象資料
+
+on:
+  schedule:
+    - cron: '5 * * * *'   # 每小時第 5 分鐘執行
+  workflow_dispatch:        # 允許手動觸發
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-and-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install requests supabase python-dotenv
+
+      - name: Fetch CWA data and store to Supabase
+        env:
+          CWA_API_KEY:    ${{ secrets.CWA_API_KEY }}
+          SUPABASE_URL:   ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:   ${{ secrets.SUPABASE_KEY }}
+        run: python scripts/fetch_cwa.py
+
+      - name: Upload log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fetch-log-${{ github.run_number }}
+          path: fetch_log.json
+          retention-days: 7

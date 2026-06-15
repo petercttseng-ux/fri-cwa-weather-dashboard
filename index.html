@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>農業部水產試驗所 — 氣象觀測儀表板</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <img src="assets/fri-logo.jpg" alt="FRI Logo" class="fri-logo" />
+      <div class="header-title">
+        <div class="org-name">農業部水產試驗所</div>
+        <div class="sys-name">氣象觀測即時儀表板</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span id="clock" class="clock-text"></span>
+      <span class="badge-update" id="lastUpdateBadge">
+        <i class="bi bi-arrow-clockwise"></i> 資料更新中…
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- ===== NAVIGATION TABS ===== -->
+<nav class="main-nav">
+  <ul class="nav-tabs-custom" id="mainTabs">
+    <li><a href="#" class="nav-link-custom active" data-tab="realtime"><i class="bi bi-broadcast"></i> 即時氣象</a></li>
+    <li><a href="#" class="nav-link-custom" data-tab="rainfall"><i class="bi bi-cloud-rain-heavy"></i> 降雨統計</a></li>
+    <li><a href="#" class="nav-link-custom" data-tab="history"><i class="bi bi-database"></i> 歷史資料</a></li>
+    <li><a href="#" class="nav-link-custom" data-tab="settings"><i class="bi bi-gear"></i> 系統設定</a></li>
+  </ul>
+</nav>
+
+<main class="main-content">
+
+<!-- ============================================================
+     TAB 1: 即時氣象
+     ============================================================ -->
+<section id="tab-realtime" class="tab-section active">
+
+  <!-- 統計卡片 -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card blue">
+      <div class="stat-icon"><i class="bi bi-thermometer-half"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">最高氣溫</div>
+        <div class="stat-value" id="maxTemp">—</div>
+        <div class="stat-sub" id="maxTempSta">—</div>
+      </div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-icon"><i class="bi bi-wind"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">最大風速</div>
+        <div class="stat-value" id="maxWind">—</div>
+        <div class="stat-sub" id="maxWindSta">—</div>
+      </div>
+    </div>
+    <div class="stat-card teal">
+      <div class="stat-icon"><i class="bi bi-droplet-fill"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">最大時雨量</div>
+        <div class="stat-value" id="maxRain1h">—</div>
+        <div class="stat-sub" id="maxRain1hSta">—</div>
+      </div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon"><i class="bi bi-moisture"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">最大相對濕度</div>
+        <div class="stat-value" id="maxHumid">—</div>
+        <div class="stat-sub" id="maxHumidSta">—</div>
+      </div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon"><i class="bi bi-broadcast-pin"></i></div>
+      <div class="stat-body">
+        <div class="stat-label">觀測站數</div>
+        <div class="stat-value" id="stationCount">—</div>
+        <div class="stat-sub">全台有效站數</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 逐時氣象資料表 -->
+  <div class="card-panel">
+    <div class="panel-header">
+      <h2><i class="bi bi-table"></i> 全測站逐時氣象資料</h2>
+      <div class="panel-actions">
+        <input type="text" id="weatherSearch" placeholder="搜尋縣市、鄉鎮或站名…" class="form-control form-control-sm search-input" />
+        <button class="btn btn-sm btn-outline-secondary" id="refreshWeather"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+        <button class="btn btn-sm btn-outline-success" id="exportWeatherCSV"><i class="bi bi-download"></i> 匯出CSV</button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table" id="weatherTable">
+        <thead>
+          <tr>
+            <th data-col="StationName">站名 <span class="sort-icon">⇅</span></th>
+            <th data-col="CountyName">縣市 <span class="sort-icon">⇅</span></th>
+            <th data-col="TownName">鄉鎮 <span class="sort-icon">⇅</span></th>
+            <th data-col="obs_time">觀測時間 <span class="sort-icon">⇅</span></th>
+            <th data-col="AirTemperature">氣溫(°C) <span class="sort-icon">⇅</span></th>
+            <th data-col="RelativeHumidity">濕度(%) <span class="sort-icon">⇅</span></th>
+            <th data-col="Precipitation">時雨量(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="WindSpeed">風速(m/s) <span class="sort-icon">⇅</span></th>
+            <th data-col="WindDirection">風向(°) <span class="sort-icon">⇅</span></th>
+            <th data-col="AirPressure">氣壓(hPa) <span class="sort-icon">⇅</span></th>
+            <th data-col="Weather">天氣 <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="weatherBody">
+          <tr><td colspan="11" class="loading-row"><div class="spinner"></div> 載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" id="weatherPagination"></div>
+  </div>
+
+  <!-- 雨量觀測站資料表 -->
+  <div class="card-panel mt-4">
+    <div class="panel-header">
+      <h2><i class="bi bi-cloud-rain"></i> 雨量觀測站資料</h2>
+      <div class="panel-actions">
+        <input type="text" id="rainfallSearch" placeholder="搜尋縣市、鄉鎮或站名…" class="form-control form-control-sm search-input" />
+        <button class="btn btn-sm btn-outline-secondary" id="refreshRainfall"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+        <button class="btn btn-sm btn-outline-success" id="exportRainfallCSV"><i class="bi bi-download"></i> 匯出CSV</button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table" id="rainfallTable">
+        <thead>
+          <tr>
+            <th data-col="StationName">站名 <span class="sort-icon">⇅</span></th>
+            <th data-col="CountyName">縣市 <span class="sort-icon">⇅</span></th>
+            <th data-col="TownName">鄉鎮 <span class="sort-icon">⇅</span></th>
+            <th data-col="obs_time">觀測時間 <span class="sort-icon">⇅</span></th>
+            <th data-col="now_precipitation">即時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_10min">10分(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_1hr">1小時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_3hr">3小時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_6hr">6小時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_12hr">12小時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_24hr">24小時(mm) <span class="sort-icon">⇅</span></th>
+            <th data-col="past_2days">48小時(mm) <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="rainfallBody">
+          <tr><td colspan="12" class="loading-row"><div class="spinner"></div> 載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" id="rainfallPagination"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 2: 降雨統計
+     ============================================================ -->
+<section id="tab-rainfall" class="tab-section">
+
+  <!-- 時間區段選擇 -->
+  <div class="card-panel filter-panel">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>資料來源</label>
+        <div class="btn-group" role="group">
+          <input type="radio" class="btn-check" name="dataSource" id="srcAPI" value="api" checked />
+          <label class="btn btn-outline-primary btn-sm" for="srcAPI">即時API</label>
+          <input type="radio" class="btn-check" name="dataSource" id="srcDB" value="db" />
+          <label class="btn btn-outline-primary btn-sm" for="srcDB">歷史資料庫</label>
+        </div>
+      </div>
+      <div class="filter-group" id="dbRangeGroup" style="display:none">
+        <label>起始時間</label>
+        <input type="datetime-local" id="startTime" class="form-control form-control-sm" />
+      </div>
+      <div class="filter-group" id="dbRangeGroup2" style="display:none">
+        <label>結束時間</label>
+        <input type="datetime-local" id="endTime" class="form-control form-control-sm" />
+      </div>
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary btn-sm" id="calcRainfall"><i class="bi bi-calculator"></i> 計算累積降雨量</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒說明 -->
+  <div class="alert-legend">
+    <span class="legend-item alert-red"><i class="bi bi-exclamation-triangle-fill"></i> 24h &gt; 250mm 或 48h &gt; 650mm（紅色警戒）</span>
+    <span class="legend-item alert-orange"><i class="bi bi-exclamation-circle-fill"></i> 24h &gt; 130mm 或 48h &gt; 330mm（橙色注意）</span>
+  </div>
+
+  <!-- 縣市累積降雨量 -->
+  <div class="two-col-grid">
+    <div class="card-panel">
+      <div class="panel-header">
+        <h2><i class="bi bi-map"></i> 縣市別 24小時累積降雨量</h2>
+        <span class="threshold-badge red">警戒值 &gt; 250mm</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table rank-table" id="county24Table">
+          <thead>
+            <tr><th>排名</th><th>縣市</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
+          </thead>
+          <tbody id="county24Body"><tr><td colspan="5" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-panel">
+      <div class="panel-header">
+        <h2><i class="bi bi-map"></i> 縣市別 48小時累積降雨量</h2>
+        <span class="threshold-badge red">警戒值 &gt; 650mm</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table rank-table" id="county48Table">
+          <thead>
+            <tr><th>排名</th><th>縣市</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
+          </thead>
+          <tbody id="county48Body"><tr><td colspan="5" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 鄉鎮累積降雨量 -->
+  <div class="two-col-grid">
+    <div class="card-panel mt-4">
+      <div class="panel-header">
+        <h2><i class="bi bi-geo-alt"></i> 鄉鎮別 24小時累積降雨量</h2>
+        <span class="threshold-badge red">警戒值 &gt; 250mm</span>
+      </div>
+      <div class="table-responsive" style="max-height:420px;overflow-y:auto">
+        <table class="data-table rank-table" id="town24Table">
+          <thead>
+            <tr><th>排名</th><th>縣市</th><th>鄉鎮</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
+          </thead>
+          <tbody id="town24Body"><tr><td colspan="6" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-panel mt-4">
+      <div class="panel-header">
+        <h2><i class="bi bi-geo-alt"></i> 鄉鎮別 48小時累積降雨量</h2>
+        <span class="threshold-badge red">警戒值 &gt; 650mm</span>
+      </div>
+      <div class="table-responsive" style="max-height:420px;overflow-y:auto">
+        <table class="data-table rank-table" id="town48Table">
+          <thead>
+            <tr><th>排名</th><th>縣市</th><th>鄉鎮</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
+          </thead>
+          <tbody id="town48Body"><tr><td colspan="6" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 3: 歷史資料
+     ============================================================ -->
+<section id="tab-history" class="tab-section">
+
+  <!-- 資料庫狀態 -->
+  <div class="card-panel db-status-panel">
+    <h2><i class="bi bi-database-check"></i> 雲端資料庫狀態</h2>
+    <div class="db-status-grid" id="dbStatusGrid">
+      <div class="db-stat-card">
+        <div class="db-stat-label">雨量資料筆數</div>
+        <div class="db-stat-value" id="dbRainfallCount">—</div>
+      </div>
+      <div class="db-stat-card">
+        <div class="db-stat-label">氣象資料筆數</div>
+        <div class="db-stat-value" id="dbWeatherCount">—</div>
+      </div>
+      <div class="db-stat-card">
+        <div class="db-stat-label">雨量資料起始</div>
+        <div class="db-stat-value" id="dbRainfallStart">—</div>
+      </div>
+      <div class="db-stat-card">
+        <div class="db-stat-label">雨量資料結束</div>
+        <div class="db-stat-value" id="dbRainfallEnd">—</div>
+      </div>
+      <div class="db-stat-card">
+        <div class="db-stat-label">氣象資料起始</div>
+        <div class="db-stat-value" id="dbWeatherStart">—</div>
+      </div>
+      <div class="db-stat-card">
+        <div class="db-stat-label">氣象資料結束</div>
+        <div class="db-stat-value" id="dbWeatherEnd">—</div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-outline-primary mt-2" id="refreshDbStatus"><i class="bi bi-arrow-clockwise"></i> 更新資料庫狀態</button>
+  </div>
+
+  <!-- 歷史資料上傳 -->
+  <div class="card-panel mt-4">
+    <h2><i class="bi bi-cloud-upload"></i> 歷史氣象資料上傳</h2>
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-tabs">
+        <button class="btn btn-outline-primary btn-sm active" data-upload="rainfall">雨量資料</button>
+        <button class="btn btn-outline-primary btn-sm" data-upload="weather">氣象資料</button>
+      </div>
+      <div class="upload-format">
+        <p class="text-muted small">
+          <i class="bi bi-info-circle"></i>
+          支援 CSV 格式。雨量資料欄位：<code>station_id, station_name, county_name, town_name, obs_time, now_precipitation, past_10min, past_1hr, past_3hr, past_6hr, past_12hr, past_24hr, past_2days</code>
+        </p>
+      </div>
+      <div class="upload-drop-zone" id="dropZone">
+        <i class="bi bi-file-earmark-arrow-up upload-icon"></i>
+        <p>拖曳 CSV 檔案至此，或點擊選擇檔案</p>
+        <input type="file" id="uploadFile" accept=".csv" style="display:none" />
+        <button class="btn btn-primary" id="browseFile"><i class="bi bi-folder2-open"></i> 選擇檔案</button>
+      </div>
+      <div id="uploadPreview" style="display:none">
+        <div class="alert alert-info"><i class="bi bi-file-earmark-text"></i> <span id="uploadFileName"></span> — <span id="uploadRowCount"></span> 筆資料</div>
+        <button class="btn btn-success" id="submitUpload"><i class="bi bi-cloud-upload"></i> 上傳至 Supabase</button>
+        <button class="btn btn-outline-secondary ms-2" id="cancelUpload"><i class="bi bi-x"></i> 取消</button>
+      </div>
+      <div id="uploadProgress" style="display:none">
+        <div class="progress"><div class="progress-bar progress-bar-animated" id="uploadProgressBar" style="width:0%"></div></div>
+        <div class="small text-muted mt-1" id="uploadProgressText">上傳中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 歷史查詢 -->
+  <div class="card-panel mt-4">
+    <h2><i class="bi bi-search"></i> 歷史資料查詢</h2>
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>資料類型</label>
+        <select class="form-select form-select-sm" id="historyType">
+          <option value="rainfall">雨量資料</option>
+          <option value="weather">氣象資料</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>起始時間</label>
+        <input type="datetime-local" id="histStart" class="form-control form-control-sm" />
+      </div>
+      <div class="filter-group">
+        <label>結束時間</label>
+        <input type="datetime-local" id="histEnd" class="form-control form-control-sm" />
+      </div>
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary btn-sm" id="queryHistory"><i class="bi bi-search"></i> 查詢</button>
+      </div>
+    </div>
+    <div id="historyResult" class="mt-3"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TAB 4: 系統設定
+     ============================================================ -->
+<section id="tab-settings" class="tab-section">
+
+  <!-- CWA API 設定 -->
+  <div class="card-panel">
+    <h2><i class="bi bi-key"></i> CWA API 設定</h2>
+    <div class="settings-form">
+      <div class="mb-3">
+        <label class="form-label">API 授權碼</label>
+        <div class="input-group">
+          <input type="text" class="form-control" id="cwaApiKey" placeholder="CWA-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" />
+          <button class="btn btn-outline-secondary" type="button" id="toggleApiKey"><i class="bi bi-eye"></i></button>
+        </div>
+        <div class="form-text">請至 <a href="https://opendata.cwa.gov.tw/" target="_blank">中央氣象署開放資料平台</a> 申請授權碼</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">自動更新間隔（分鐘）</label>
+        <select class="form-select" id="updateInterval" style="max-width:200px">
+          <option value="5">5 分鐘</option>
+          <option value="10">10 分鐘</option>
+          <option value="30">30 分鐘</option>
+          <option value="60" selected>60 分鐘</option>
+          <option value="0">不自動更新</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="saveCwaSettings"><i class="bi bi-save"></i> 儲存 CWA 設定</button>
+      <button class="btn btn-outline-secondary ms-2" id="testCwaApi"><i class="bi bi-plug"></i> 測試連線</button>
+      <div id="cwaTestResult" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- Supabase 設定 -->
+  <div class="card-panel mt-4">
+    <h2><i class="bi bi-server"></i> Supabase 資料庫設定</h2>
+    <div class="settings-form">
+      <div class="mb-3">
+        <label class="form-label">Supabase Project URL</label>
+        <input type="url" class="form-control" id="supabaseUrl" placeholder="https://xxxxxxxxxxxx.supabase.co" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Supabase Anon Key</label>
+        <div class="input-group">
+          <input type="password" class="form-control" id="supabaseKey" placeholder="eyJhbGciOi..." />
+          <button class="btn btn-outline-secondary" type="button" id="toggleSbKey"><i class="bi bi-eye"></i></button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="saveSupabaseSettings"><i class="bi bi-save"></i> 儲存 Supabase 設定</button>
+      <button class="btn btn-outline-secondary ms-2" id="testSupabase"><i class="bi bi-plug"></i> 測試連線</button>
+      <button class="btn btn-outline-info ms-2" id="initSchema"><i class="bi bi-database-add"></i> 初始化資料表</button>
+      <div id="sbTestResult" class="mt-2"></div>
+    </div>
+
+    <!-- Schema SQL -->
+    <div class="mt-4">
+      <h5>資料表初始化 SQL（手動執行於 Supabase SQL Editor）</h5>
+      <div class="code-block" id="schemaSQL">
+-- 雨量觀測資料表
+CREATE TABLE IF NOT EXISTS rainfall_observations (
+  id BIGSERIAL PRIMARY KEY,
+  station_id TEXT NOT NULL,
+  station_name TEXT,
+  county_name TEXT,
+  town_name TEXT,
+  latitude FLOAT,
+  longitude FLOAT,
+  altitude FLOAT,
+  obs_time TIMESTAMPTZ NOT NULL,
+  now_precipitation FLOAT,
+  past_10min FLOAT,
+  past_1hr FLOAT,
+  past_3hr FLOAT,
+  past_6hr FLOAT,
+  past_12hr FLOAT,
+  past_24hr FLOAT,
+  past_2days FLOAT,
+  past_3days FLOAT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(station_id, obs_time)
+);
+
+-- 氣象觀測資料表
+CREATE TABLE IF NOT EXISTS weather_observations (
+  id BIGSERIAL PRIMARY KEY,
+  station_id TEXT NOT NULL,
+  station_name TEXT,
+  county_name TEXT,
+  town_name TEXT,
+  latitude FLOAT,
+  longitude FLOAT,
+  altitude FLOAT,
+  obs_time TIMESTAMPTZ NOT NULL,
+  weather TEXT,
+  precipitation FLOAT,
+  wind_direction FLOAT,
+  wind_speed FLOAT,
+  air_temperature FLOAT,
+  relative_humidity FLOAT,
+  air_pressure FLOAT,
+  uv_index FLOAT,
+  peak_gust_speed FLOAT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(station_id, obs_time)
+);
+
+-- 索引加速查詢
+CREATE INDEX IF NOT EXISTS idx_rainfall_obs_time ON rainfall_observations(obs_time DESC);
+CREATE INDEX IF NOT EXISTS idx_rainfall_county ON rainfall_observations(county_name);
+CREATE INDEX IF NOT EXISTS idx_weather_obs_time ON weather_observations(obs_time DESC);
+CREATE INDEX IF NOT EXISTS idx_weather_county ON weather_observations(county_name);
+
+-- 啟用 Row Level Security（允許匿名讀寫）
+ALTER TABLE rainfall_observations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weather_observations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON rainfall_observations FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all" ON weather_observations FOR ALL USING (true) WITH CHECK (true);
+      </div>
+      <button class="btn btn-sm btn-outline-secondary mt-2" id="copySchemaSql"><i class="bi bi-clipboard"></i> 複製 SQL</button>
+    </div>
+  </div>
+
+  <!-- 關於 -->
+  <div class="card-panel mt-4">
+    <h2><i class="bi bi-info-circle"></i> 關於本系統</h2>
+    <div class="about-grid">
+      <div><strong>系統版本</strong><span>v2.0.0</span></div>
+      <div><strong>資料來源</strong><span><a href="https://opendata.cwa.gov.tw/" target="_blank">中央氣象署開放資料平台</a></span></div>
+      <div><strong>雨量API</strong><span>O-A0002-001（雨量觀測站）</span></div>
+      <div><strong>氣象API</strong><span>O-A0001-001（全測站逐時氣象）</span></div>
+      <div><strong>資料更新</strong><span>GitHub Actions 每小時自動同步至 Supabase</span></div>
+      <div><strong>開發單位</strong><span>農業部水產試驗所</span></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="site-footer-bar">
+  <span>© 2024–2026 農業部水產試驗所 Fisheries Research Institute, MOA</span>
+  <span>資料來源：中央氣象署開放資料平台</span>
+</footer>
+
+<!-- ===== TOAST ===== -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+  <div id="appToast" class="toast" role="alert">
+    <div class="toast-header">
+      <i class="bi bi-info-circle-fill text-primary me-2"></i>
+      <strong class="me-auto">系統通知</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastBody"></div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
