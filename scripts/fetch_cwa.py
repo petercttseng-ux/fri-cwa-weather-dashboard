@@ -82,7 +82,7 @@ def parse_weather(j):
             'relative_humidity': safe_float(we.get('RelativeHumidity')),
             'air_pressure':      safe_float(we.get('AirPressure')),
             'uv_index':          safe_float(we.get('UVIndex')),
-            'peak_gust_speed':   safe_float(we.get('PeakGustSpeed')),
+            'peak_gust_speed':   safe_float(we.get('GustInfo', {}).get('PeakGustSpeed')),
         })
     return [r for r in rows if r['obs_time']]
 

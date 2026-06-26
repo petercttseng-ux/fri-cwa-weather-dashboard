@@ -19,7 +19,7 @@ const State = {
 };
 
 /* ---------- 工具函式 ---------- */
-const fmtNum  = v => (v === null || v === undefined || v === '' || v === '-99' || isNaN(+v)) ? '—' : (+v).toFixed(1);
+const fmtNum  = v => (v === null || v === undefined || v === '' || +v === -99 || isNaN(+v)) ? '—' : (+v).toFixed(1);
 const fmtTime = s => s ? new Date(s).toLocaleString('zh-TW', { hour12: false }) : '—';
 const clamp   = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -604,6 +604,9 @@ async function queryHistory() {
   const result = document.getElementById('historyResult');
   if (!result) return;
 
+  if (!start || !end) { showToast('請選擇起始及結束時間', 'warning'); return; }
+  if (new Date(start) >= new Date(end)) { showToast('結束時間必須晚於起始時間', 'warning'); return; }
+
   result.innerHTML = '<div class="spinner d-inline-block"></div> 查詢中…';
   const { data, error } = await queryHistoryRange(table, new Date(start).toISOString(), new Date(end).toISOString());
   if (error) { result.innerHTML = `<div class="alert alert-danger">${error}</div>`; return; }
@@ -710,10 +713,11 @@ function autoCalcRainfallIfApi() {
   if (src !== 'api') return;
   if (!State.rainfallData.length) {
     /* 資料尚未到位，顯示等待提示 */
+    const colspanMap = { county24Body: 5, county48Body: 5, town24Body: 6, town48Body: 6 };
     ['county24Body', 'county48Body', 'town24Body', 'town48Body'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.textContent.trim().startsWith('請點擊')) {
-        el.innerHTML = '<tr><td colspan="6" class="loading-row"><div class="spinner d-inline-block me-2"></div>等待 API 資料載入…</td></tr>';
+        el.innerHTML = `<tr><td colspan="${colspanMap[id]}" class="loading-row"><div class="spinner d-inline-block me-2"></div>等待 API 資料載入…</td></tr>`;
       }
     });
     return;
@@ -771,4 +775,13 @@ function init() {
 
   /* 歷史查詢 */
   document.getElementById('queryHistory')?.addEventListener('click', queryHistory);
-  document.get
+  document.getElementById('refreshDbStatus')?.addEventListener('click', refreshDbStatus);
+
+  /* 自動更新排程 */
+  setupAutoRefresh();
+
+  /* 初始載入資料 */
+  fetchCWAData();
+}
+
+document.addEventListener('DOMContentLoaded', init);
