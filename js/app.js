@@ -79,6 +79,9 @@ async function fetchCWAData() {
     console.error(err);
     updateBadge('更新失敗 — ' + err.message, false);
     showToast('CWA API 取得失敗：' + err.message, 'danger');
+    /* 清除「載入中」狀態，避免 spinner 永久卡住 */
+    if (!State.weatherData.length)  renderWeatherTable();
+    if (!State.rainfallData.length) renderRainfallTable();
   }
 }
 
@@ -90,7 +93,7 @@ function updateBadge(msg, spinning) {
 
 /* ---- 解析氣象資料 ---- */
 function parseWeatherData(json) {
-  if (!json?.records?.Station) return;
+  if (!json?.records?.Station) { renderWeatherTable(); return; }
   State.weatherData = json.records.Station.map(s => {
     const geo = s.GeoInfo ?? {};
     const we  = s.WeatherElement ?? {};
@@ -120,7 +123,7 @@ function parseWeatherData(json) {
 
 /* ---- 解析雨量資料 ---- */
 function parseRainfallData(json) {
-  if (!json?.records?.Station) return;
+  if (!json?.records?.Station) { renderRainfallTable(); return; }
   State.rainfallData = json.records.Station.map(s => {
     const geo = s.GeoInfo ?? {};
     const re  = s.RainfallElement ?? {};
@@ -768,12 +771,4 @@ function init() {
 
   /* 歷史查詢 */
   document.getElementById('queryHistory')?.addEventListener('click', queryHistory);
-  document.getElementById('refreshDbStatus')?.addEventListener('click', refreshDbStatus);
-
-  /* 首次載入 */
-  fetchCWAData();
-  setupAutoRefresh();
-}
-
-document.addEventListener('DOMContentLoaded', init);
-                                                                         
+  document.getElementById('refreshDbStatus')
