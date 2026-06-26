@@ -114,7 +114,7 @@ function parseWeatherData(json) {
       RelativeHumidity: parseFloat(we.RelativeHumidity ?? -99),
       AirPressure:      parseFloat(we.AirPressure ?? -99),
       UVIndex:          parseFloat(we.UVIndex ?? -99),
-      PeakGustSpeed:    parseFloat(we.PeakGustSpeed ?? -99),
+      PeakGustSpeed:    parseFloat(we.GustInfo?.PeakGustSpeed ?? we.PeakGustSpeed ?? -99),
     };
   });
   renderWeatherTable();
@@ -771,4 +771,4 @@ function init() {
 
   /* 歷史查詢 */
   document.getElementById('queryHistory')?.addEventListener('click', queryHistory);
-  document.getElementById('refreshDbStatus')
+  document.get
