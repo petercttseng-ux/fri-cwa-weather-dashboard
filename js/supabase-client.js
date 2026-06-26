@@ -65,15 +65,26 @@ async function fetchDbStats() {
 }
 
 /* ---- 歷史區段查詢 ---- */
-async function queryHistoryRange(table, start, end) {
+async function queryHistoryRange(table, start, end, onProgress) {
   const sb = getSupabase(); if (!sb) return { data: [], error: 'Supabase 未設定' };
-  const { data, error } = await sb.from(table)
-    .select('*')
-    .gte('obs_time', start)
-    .lte('obs_time', end)
-    .order('obs_time', { ascending: false })
-    .limit(5000);
-  return { data: data ?? [], error };
+  /* Supabase PostgREST 預設每頁上限 1000 筆，需分頁迴圈取回全部資料 */
+  const PAGE = 1000;
+  const MAX_ROWS = 100000; // 安全上限，避免瀏覽器記憶體耗盡
+  let all = [], from = 0;
+  while (all.length < MAX_ROWS) {
+    const { data, error } = await sb.from(table)
+      .select('*')
+      .gte('obs_time', start)
+      .lte('obs_time', end)
+      .order('obs_time', { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) return { data: all, error };
+    if (data && data.length > 0) all = all.concat(data);
+    if (onProgress) onProgress(all.length);
+    if (!data || data.length < PAGE) break; // 已到最後一頁
+    from += PAGE;
+  }
+  return { data: all, error: null };
 }
 
 /* ---- 計算 DB 累積降雨（按縣市/鄉鎮聚合） ---- */

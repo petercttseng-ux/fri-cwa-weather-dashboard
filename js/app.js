@@ -607,11 +607,17 @@ async function queryHistory() {
   if (!start || !end) { showToast('請選擇起始及結束時間', 'warning'); return; }
   if (new Date(start) >= new Date(end)) { showToast('結束時間必須晚於起始時間', 'warning'); return; }
 
-  result.innerHTML = '<div class="spinner d-inline-block"></div> 查詢中…';
-  const { data, error } = await queryHistoryRange(table, new Date(start).toISOString(), new Date(end).toISOString());
+  result.innerHTML = '<div class="d-flex align-items-center gap-2"><div class="spinner"></div><span id="histProgressText">查詢中…</span></div>';
+
+  const { data, error } = await queryHistoryRange(
+    table,
+    new Date(start).toISOString(),
+    new Date(end).toISOString(),
+    count => { const el = document.getElementById('histProgressText'); if (el) el.textContent = `查詢中… 已取得 ${count.toLocaleString()} 筆`; }
+  );
   if (error) { result.innerHTML = `<div class="alert alert-danger">${error}</div>`; return; }
 
-  result.innerHTML = `<div class="alert alert-info">共查得 <strong>${data.length}</strong> 筆資料</div>
+  result.innerHTML = `<div class="alert alert-info">共查得 <strong>${data.length.toLocaleString()}</strong> 筆資料</div>
     <button class="btn btn-sm btn-outline-success" id="exportHistBtn"><i class="bi bi-download"></i> 匯出CSV</button>`;
   document.getElementById('exportHistBtn')?.addEventListener('click', () => exportCSV(data, `history_${type}_${start}.csv`));
 }
