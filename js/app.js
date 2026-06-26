@@ -235,7 +235,7 @@ function renderWeatherTable() {
   );
   sortArray(State.weatherFiltered, State.weatherSort.col, State.weatherSort.dir);
   renderPagedTable('weatherBody', 'weatherPagination', State.weatherFiltered, State.weatherPage,
-    renderWeatherRow, () => { State.weatherPage = 1; renderWeatherTable(); });
+    renderWeatherRow, renderWeatherTable);
 }
 
 function renderWeatherRow(d) {
@@ -265,7 +265,7 @@ function renderRainfallTable() {
   );
   sortArray(State.rainfallFiltered, State.rainfallSort.col, State.rainfallSort.dir);
   renderPagedTable('rainfallBody', 'rainfallPagination', State.rainfallFiltered, State.rainfallPage,
-    renderRainfallRow, () => { State.rainfallPage = 1; renderRainfallTable(); });
+    renderRainfallRow, renderRainfallTable);
 }
 
 function renderRainfallRow(d) {
@@ -776,3 +776,4 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+                                                                         
