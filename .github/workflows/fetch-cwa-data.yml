@@ -17,14 +17,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate secrets
+        run: |
+          missing=()
+          [ -z "$CWA_API_KEY" ]    && missing+=("CWA_API_KEY")
+          [ -z "$SUPABASE_URL" ]   && missing+=("SUPABASE_URL")
+          [ -z "$SUPABASE_KEY" ]   && missing+=("SUPABASE_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing GitHub Secrets: ${missing[*]}"
+            echo "   請至 Repository > Settings > Secrets and variables > Actions 新增。"
+            exit 1
+          fi
+          echo "✅ All secrets present."
+        env:
+          CWA_API_KEY:  ${{ secrets.CWA_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
-        run: pip install requests supabase python-dotenv
+        run: pip install -r requirements.txt
 
       - name: Fetch CWA data and store to Supabase
         env:

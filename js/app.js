@@ -50,6 +50,7 @@ document.querySelectorAll('.nav-link-custom').forEach(a => {
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.getElementById(`tab-${tab}`).classList.add('active');
     if (tab === 'history') refreshDbStatus();
+    if (tab === 'rainfall') autoCalcRainfallIfApi();
   });
 });
 
@@ -144,6 +145,8 @@ function parseRainfallData(json) {
     };
   });
   renderRainfallTable();
+  /* 若降雨統計頁使用即時API模式，自動更新排行 */
+  autoCalcRainfallIfApi();
 }
 
 /* ================================================================
@@ -689,6 +692,33 @@ function initSettings() {
 }
 
 /* ================================================================
+   自動計算（即時API模式）
+   ================================================================ */
+/**
+ * 若降雨統計頁目前選取「即時API」模式，且已有雨量資料，
+ * 則自動執行累積降雨量排行計算。
+ * 在以下三個時機呼叫：
+ *   1. 切換到「降雨統計」tab
+ *   2. parseRainfallData() 取得新資料後
+ *   3. 使用者將 radio 切回「即時API」
+ */
+function autoCalcRainfallIfApi() {
+  const src = document.querySelector('input[name="dataSource"]:checked')?.value ?? 'api';
+  if (src !== 'api') return;
+  if (!State.rainfallData.length) {
+    /* 資料尚未到位，顯示等待提示 */
+    ['county24Body', 'county48Body', 'town24Body', 'town48Body'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.textContent.trim().startsWith('請點擊')) {
+        el.innerHTML = '<tr><td colspan="6" class="loading-row"><div class="spinner d-inline-block me-2"></div>等待 API 資料載入…</td></tr>';
+      }
+    });
+    return;
+  }
+  calcAccumRainfall();
+}
+
+/* ================================================================
    資料來源切換（降雨統計頁）
    ================================================================ */
 function initRainfallTab() {
@@ -697,6 +727,8 @@ function initRainfallTab() {
       const isDb = radio.value === 'db';
       document.getElementById('dbRangeGroup').style.display  = isDb ? '' : 'none';
       document.getElementById('dbRangeGroup2').style.display = isDb ? '' : 'none';
+      /* 切回即時API時自動顯示最新資料 */
+      if (!isDb) autoCalcRainfallIfApi();
     });
   });
   document.getElementById('calcRainfall')?.addEventListener('click', calcAccumRainfall);
