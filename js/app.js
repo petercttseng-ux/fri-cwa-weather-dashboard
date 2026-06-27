@@ -373,66 +373,49 @@ async function calcAccumRainfall(hours) {
     }));
     renderRainfallRanking(rows, null);
   } else {
-    /* 歷史資料庫：同時查詢往前 24h 與 48h 兩段 */
+    /* 歷史資料庫：取使用者選擇時間點之前最近一筆，直接讀 past_24hr / past_2days */
     const endVal = document.getElementById('endTime')?.value;
     if (!endVal) { showToast('請先選擇時間點', 'warning'); return; }
 
-    const endDate    = new Date(endVal);
-    const start24    = new Date(endDate.getTime() - 24 * 3600_000);
-    const start48    = new Date(endDate.getTime() - 48 * 3600_000);
-    const endISO     = endDate.toISOString();
+    const endDate  = new Date(endVal);
+    const endISO   = endDate.toISOString();
+    /* 往前搜尋 48h 視窗，確保各站都能找到資料 */
+    const startISO = new Date(endDate.getTime() - 48 * 3600_000).toISOString();
 
     const fmtLocal = d => d.toLocaleString('zh-TW', { hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit' });
 
-    showToast('正在同時查詢前 24 及 48 小時降雨資料…');
+    showToast('正在從資料庫讀取降雨量…');
+    const data = await calcDbRainfallByRange(startISO, endISO);
+    if (!data) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
 
-    /* 同時發出兩個查詢 */
-    const [data24, data48] = await Promise.all([
-      calcDbRainfallByRange(start24.toISOString(), endISO),
-      calcDbRainfallByRange(start48.toISOString(), endISO),
-    ]);
-
-    if (!data24 || !data48) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
-
-    /* 顯示兩段查詢區間、筆數 */
-    State.dbRainfallRaw = data48; // CSV 下載給較大的 48h 資料集
-    set('dbQueryRange24', `${fmtLocal(start24)} ～ ${fmtLocal(endDate)}`);
-    set('dbQueryCount24', data24.length.toLocaleString());
-    set('dbQueryRange48', `${fmtLocal(start48)} ～ ${fmtLocal(endDate)}`);
-    set('dbQueryCount48', data48.length.toLocaleString());
+    /* 顯示查詢資訊 */
+    State.dbRainfallRaw = data;
+    set('dbQueryRange24', `往前24h（至 ${fmtLocal(endDate)}）`);
+    set('dbQueryCount24', data.length.toLocaleString());
+    set('dbQueryRange48', `往前48h（至 ${fmtLocal(endDate)}）`);
+    set('dbQueryCount48', data.length.toLocaleString());
     const resultBar = document.getElementById('dbQueryResult');
     if (resultBar) resultBar.style.display = '';
 
-    /* 逐站加總各段 */
-    const aggStation = (data) => {
-      const map = {};
-      data.forEach(r => {
-        if (!map[r.station_id]) map[r.station_id] = {
-          station_id: r.station_id, station_name: r.station_name,
-          county_name: r.county_name, town_name: r.town_name, sum: 0,
-        };
-        if (r.past_1hr !== null && +r.past_1hr >= 0) map[r.station_id].sum += +r.past_1hr;
-      });
-      return map;
-    };
-
-    const map24 = aggStation(data24);
-    const map48 = aggStation(data48);
-
-    /* 合併兩段結果 */
-    const allIds = new Set([...Object.keys(map24), ...Object.keys(map48)]);
-    rows = [...allIds].map(id => {
-      const s24 = map24[id] ?? map48[id];
-      const s48 = map48[id] ?? map24[id];
-      return {
-        station_id: s24.station_id, station_name: s24.station_name,
-        county_name: s24.county_name, town_name: s24.town_name,
-        accum24: map24[id]?.sum ?? 0,
-        accum48: map48[id]?.sum ?? 0,
-      };
+    /* 各站取最接近時間點（obs_time 最大）的那筆，讀 past_24hr / past_2days */
+    const byStation = {};
+    data.forEach(r => {
+      const id = r.station_id;
+      if (!byStation[id] || r.obs_time > byStation[id].obs_time) {
+        byStation[id] = r;
+      }
     });
+
+    rows = Object.values(byStation).map(r => ({
+      station_id:  r.station_id,
+      station_name: r.station_name,
+      county_name:  r.county_name,
+      town_name:    r.town_name,
+      accum24: (r.past_24hr != null && +r.past_24hr >= 0) ? +r.past_24hr : 0,
+      accum48: (r.past_2days != null && +r.past_2days >= 0) ? +r.past_2days : 0,
+    }));
 
     renderRainfallRanking(rows, 'both');
   }
