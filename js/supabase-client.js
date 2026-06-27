@@ -107,7 +107,7 @@ async function calcDbRainfallByRange(start, end) {
   let all = [], from = 0;
   while (all.length < MAX_ROWS) {
     const { data, error } = await sb.from('rainfall_observations')
-      .select('station_id,station_name,county_name,town_name,obs_time,past_1hr')
+      .select('*')
       .gte('obs_time', start)
       .lte('obs_time', end)
       .order('obs_time', { ascending: true })
