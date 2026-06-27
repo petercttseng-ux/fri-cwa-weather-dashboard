@@ -16,6 +16,7 @@ const State = {
   autoTimer: null,
   uploadType: 'rainfall',
   uploadRows: [],
+  dbRainfallRaw: [],
 };
 
 /* ---------- 工具函式 ---------- */
@@ -379,6 +380,12 @@ async function calcAccumRainfall() {
     showToast('正在從資料庫計算累積降雨…');
     const data = await calcDbRainfallByRange(new Date(start).toISOString(), new Date(end).toISOString());
     if (!data) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
+
+    /* 顯示取得筆數與 CSV 下載區 */
+    State.dbRainfallRaw = data;
+    set('dbQueryCount', data.length.toLocaleString());
+    const resultBar = document.getElementById('dbQueryResult');
+    if (resultBar) resultBar.style.display = '';
 
     /* 逐站加總 past_1hr */
     const byStation = {};
@@ -778,6 +785,12 @@ function init() {
   /* 匯出 */
   document.getElementById('exportWeatherCSV')?.addEventListener('click', () => exportCSV(State.weatherFiltered, 'weather_data.csv'));
   document.getElementById('exportRainfallCSV')?.addEventListener('click', () => exportCSV(State.rainfallFiltered, 'rainfall_data.csv'));
+  document.getElementById('exportDbRainfallCSV')?.addEventListener('click', () => {
+    if (!State.dbRainfallRaw.length) { showToast('尚無資料，請先計算累積降雨量', 'warning'); return; }
+    const start = document.getElementById('startTime')?.value?.replace(/[: ]/g, '-') ?? 'start';
+    const end   = document.getElementById('endTime')?.value?.replace(/[: ]/g, '-') ?? 'end';
+    exportCSV(State.dbRainfallRaw, `rainfall_db_${start}_to_${end}.csv`);
+  });
 
   /* 歷史查詢 */
   document.getElementById('queryHistory')?.addEventListener('click', queryHistory);

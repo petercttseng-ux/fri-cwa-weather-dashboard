@@ -192,6 +192,13 @@
         <button class="btn btn-primary btn-sm" id="calcRainfall"><i class="bi bi-calculator"></i> 計算累積降雨量</button>
       </div>
     </div>
+    <!-- 歷史資料庫：筆數資訊與 CSV 下載（計算後顯示） -->
+    <div id="dbQueryResult" style="display:none" class="filter-row mt-2 align-items-center gap-3">
+      <span class="text-muted small"><i class="bi bi-database"></i> 取得原始資料：<strong id="dbQueryCount">0</strong> 筆</span>
+      <button class="btn btn-sm btn-outline-success" id="exportDbRainfallCSV">
+        <i class="bi bi-download"></i> 下載原始資料 CSV
+      </button>
+    </div>
   </div>
 
   <!-- 警戒說明 -->
