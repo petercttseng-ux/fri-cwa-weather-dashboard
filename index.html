@@ -179,21 +179,31 @@
           <label class="btn btn-outline-primary btn-sm" for="srcDB">歷史資料庫</label>
         </div>
       </div>
-      <div class="filter-group" id="dbRangeGroup" style="display:none">
-        <label>起始時間</label>
-        <input type="datetime-local" id="startTime" class="form-control form-control-sm" />
-      </div>
-      <div class="filter-group" id="dbRangeGroup2" style="display:none">
-        <label>結束時間</label>
-        <input type="datetime-local" id="endTime" class="form-control form-control-sm" />
-      </div>
-      <div class="filter-group">
+      <!-- 即時API：原有計算按鈕 -->
+      <div class="filter-group" id="apiCalcGroup">
         <label>&nbsp;</label>
         <button class="btn btn-primary btn-sm" id="calcRainfall"><i class="bi bi-calculator"></i> 計算累積降雨量</button>
       </div>
+      <!-- 歷史資料庫：時間點選擇 + 兩個計算按鈕 -->
+      <div class="filter-group" id="dbRangeGroup" style="display:none">
+        <label>選擇時間點</label>
+        <input type="datetime-local" id="endTime" class="form-control form-control-sm" />
+      </div>
+      <div class="filter-group" id="dbCalcGroup" style="display:none">
+        <label>&nbsp;</label>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary btn-sm" id="calc24Rainfall">
+            <i class="bi bi-cloud-rain"></i> 24小時降雨量
+          </button>
+          <button class="btn btn-info btn-sm text-white" id="calc48Rainfall">
+            <i class="bi bi-cloud-rain-heavy"></i> 48小時降雨量
+          </button>
+        </div>
+      </div>
     </div>
-    <!-- 歷史資料庫：筆數資訊與 CSV 下載（計算後顯示） -->
+    <!-- 歷史資料庫：查詢結果筆數與 CSV 下載（計算後顯示） -->
     <div id="dbQueryResult" style="display:none" class="filter-row mt-2 align-items-center gap-3">
+      <span class="text-muted small"><i class="bi bi-clock-history"></i> 查詢區間：<strong id="dbQueryRange">—</strong></span>
       <span class="text-muted small"><i class="bi bi-database"></i> 取得原始資料：<strong id="dbQueryCount">0</strong> 筆</span>
       <button class="btn btn-sm btn-outline-success" id="exportDbRainfallCSV">
         <i class="bi bi-download"></i> 下載原始資料 CSV
@@ -219,7 +229,7 @@
           <thead>
             <tr><th>排名</th><th>縣市</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
           </thead>
-          <tbody id="county24Body"><tr><td colspan="5" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+          <tbody id="county24Body"><tr><td colspan="5" class="loading-row">請選擇時間點後點擊「24小時降雨量」或「48小時降雨量」</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -233,7 +243,7 @@
           <thead>
             <tr><th>排名</th><th>縣市</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
           </thead>
-          <tbody id="county48Body"><tr><td colspan="5" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+          <tbody id="county48Body"><tr><td colspan="5" class="loading-row">請選擇時間點後點擊「24小時降雨量」或「48小時降雨量」</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -251,7 +261,7 @@
           <thead>
             <tr><th>排名</th><th>縣市</th><th>鄉鎮</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
           </thead>
-          <tbody id="town24Body"><tr><td colspan="6" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+          <tbody id="town24Body"><tr><td colspan="6" class="loading-row">請選擇時間點後點擊「24小時降雨量」或「48小時降雨量」</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -265,7 +275,7 @@
           <thead>
             <tr><th>排名</th><th>縣市</th><th>鄉鎮</th><th>最大累積降雨量 (mm)</th><th>代表站</th><th>狀態</th></tr>
           </thead>
-          <tbody id="town48Body"><tr><td colspan="6" class="loading-row">請點擊「計算累積降雨量」</td></tr></tbody>
+          <tbody id="town48Body"><tr><td colspan="6" class="loading-row">請選擇時間點後點擊「24小時降雨量」或「48小時降雨量」</td></tr></tbody>
         </table>
       </div>
     </div>

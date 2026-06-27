@@ -359,12 +359,12 @@ function initSortHeaders(tableId, stateKey, renderFn) {
 /* ================================================================
    累積降雨量計算
    ================================================================ */
-async function calcAccumRainfall() {
+async function calcAccumRainfall(hours) {
   const src = document.querySelector('input[name="dataSource"]:checked')?.value ?? 'api';
   let rows = [];
 
   if (src === 'api') {
-    /* 用 API 取得的即時資料（past_24hr / past_2days） */
+    /* 即時API：直接用 past_24hr / past_2days */
     rows = State.rainfallData.map(d => ({
       station_id: d.StationId, station_name: d.StationName,
       county_name: d.CountyName, town_name: d.TownName,
@@ -372,17 +372,26 @@ async function calcAccumRainfall() {
       accum48: d.past_2days >= 0 ? d.past_2days : 0,
     }));
   } else {
-    /* 從 Supabase 歷史資料計算 */
-    const start = document.getElementById('startTime')?.value;
-    const end   = document.getElementById('endTime')?.value;
-    if (!start || !end) { showToast('請選擇起始及結束時間', 'warning'); return; }
+    /* 歷史資料庫：以使用者選擇的時間點往前 hours 小時 */
+    const endVal = document.getElementById('endTime')?.value;
+    if (!endVal) { showToast('請先選擇時間點', 'warning'); return; }
 
-    showToast('正在從資料庫計算累積降雨…');
-    const data = await calcDbRainfallByRange(new Date(start).toISOString(), new Date(end).toISOString());
+    const endDate   = new Date(endVal);
+    const startDate = new Date(endDate.getTime() - hours * 3600_000);
+    const endISO    = endDate.toISOString();
+    const startISO  = startDate.toISOString();
+
+    const fmtLocal = d => d.toLocaleString('zh-TW', { hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit' });
+
+    showToast(`正在查詢前 ${hours} 小時降雨資料…`);
+    const data = await calcDbRainfallByRange(startISO, endISO);
     if (!data) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
 
-    /* 顯示取得筆數與 CSV 下載區 */
+    /* 顯示查詢區間、筆數與 CSV 下載 */
     State.dbRainfallRaw = data;
+    set('dbQueryRange', `${fmtLocal(startDate)} ～ ${fmtLocal(endDate)}`);
     set('dbQueryCount', data.length.toLocaleString());
     const resultBar = document.getElementById('dbQueryResult');
     if (resultBar) resultBar.style.display = '';
@@ -393,21 +402,23 @@ async function calcAccumRainfall() {
       if (!byStation[r.station_id]) {
         byStation[r.station_id] = {
           station_id: r.station_id, station_name: r.station_name,
-          county_name: r.county_name, town_name: r.town_name, sum: 0, n: 0,
+          county_name: r.county_name, town_name: r.town_name, sum: 0,
         };
       }
-      if (r.past_1hr !== null) { byStation[r.station_id].sum += +r.past_1hr; byStation[r.station_id].n++; }
+      if (r.past_1hr !== null && +r.past_1hr >= 0) byStation[r.station_id].sum += +r.past_1hr;
     });
-    const hrs = (new Date(end) - new Date(start)) / 3600_000;
+
+    /* hours=24 → accum24=sum, accum48=0（只顯示24h表格有意義）
+       hours=48 → accum48=sum, accum24=0（只顯示48h表格有意義）*/
     rows = Object.values(byStation).map(s => ({
       station_id: s.station_id, station_name: s.station_name,
       county_name: s.county_name, town_name: s.town_name,
-      accum24: hrs <= 24 ? s.sum : s.sum * (24 / Math.max(hrs, 1)),
-      accum48: hrs <= 48 ? s.sum : s.sum * (48 / Math.max(hrs, 1)),
+      accum24: hours <= 24 ? s.sum : 0,
+      accum48: hours === 48 ? s.sum : 0,
     }));
   }
 
-  renderRainfallRanking(rows);
+  renderRainfallRanking(rows, src === 'db' ? hours : null);
 }
 
 function aggByKey(rows, keyFn, v24Fn, v48Fn, nameFields) {
@@ -422,7 +433,19 @@ function aggByKey(rows, keyFn, v24Fn, v48Fn, nameFields) {
   return Object.values(map);
 }
 
-function renderRainfallRanking(rows) {
+function renderRainfallRanking(rows, hours) {
+  /* 動態更新面板標題（歷史DB模式顯示實際小時數） */
+  const label24 = hours ? `${hours}小時` : '24小時';
+  const label48 = hours === 48 ? '48小時' : '48小時';
+  document.querySelectorAll('#county24Table').forEach(t => {
+    const th = t.querySelector('thead tr th:nth-child(3)');
+    if (th) th.textContent = `最大累積降雨量 (mm) [前${label24}]`;
+  });
+  document.querySelectorAll('#county48Table').forEach(t => {
+    const th = t.querySelector('thead tr th:nth-child(3)');
+    if (th) th.textContent = `最大累積降雨量 (mm) [前${label48}]`;
+  });
+
   /* 縣市聚合 */
   const byCounty = aggByKey(rows, r => r.county_name, r => r.accum24, r => r.accum48, ['county_name']);
   byCounty.sort((a, b) => b.max24 - a.max24);
@@ -735,7 +758,7 @@ function autoCalcRainfallIfApi() {
     });
     return;
   }
-  calcAccumRainfall();
+  calcAccumRainfall(24);
 }
 
 /* ================================================================
@@ -745,13 +768,22 @@ function initRainfallTab() {
   document.querySelectorAll('input[name="dataSource"]').forEach(radio => {
     radio.addEventListener('change', () => {
       const isDb = radio.value === 'db';
+      /* 歷史資料庫：顯示時間點選擇與兩個計算按鈕；隱藏即時API按鈕 */
       document.getElementById('dbRangeGroup').style.display  = isDb ? '' : 'none';
-      document.getElementById('dbRangeGroup2').style.display = isDb ? '' : 'none';
-      /* 切回即時API時自動顯示最新資料 */
+      document.getElementById('dbCalcGroup').style.display   = isDb ? '' : 'none';
+      document.getElementById('apiCalcGroup').style.display  = isDb ? 'none' : '';
+      /* 隱藏上次查詢結果列 */
+      const resultBar = document.getElementById('dbQueryResult');
+      if (resultBar) resultBar.style.display = 'none';
+      /* 切回即時API時自動計算 */
       if (!isDb) autoCalcRainfallIfApi();
     });
   });
-  document.getElementById('calcRainfall')?.addEventListener('click', calcAccumRainfall);
+  /* 即時API按鈕 */
+  document.getElementById('calcRainfall')?.addEventListener('click', () => calcAccumRainfall(24));
+  /* 歷史資料庫按鈕 */
+  document.getElementById('calc24Rainfall')?.addEventListener('click', () => calcAccumRainfall(24));
+  document.getElementById('calc48Rainfall')?.addEventListener('click', () => calcAccumRainfall(48));
 }
 
 /* ================================================================
