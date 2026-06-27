@@ -101,12 +101,23 @@ async function calcDbRainfallAgg(hoursAgo) {
 /* ---- 自訂區段計算累積降雨 ---- */
 async function calcDbRainfallByRange(start, end) {
   const sb = getSupabase(); if (!sb) return null;
-  const { data, error } = await sb.from('rainfall_observations')
-    .select('station_id,station_name,county_name,town_name,obs_time,past_1hr')
-    .gte('obs_time', start)
-    .lte('obs_time', end);
-  if (error) return null;
-  return data;
+  /* 與 queryHistoryRange 相同：分頁迴圈，每次取 1000 筆直到取完 */
+  const PAGE = 1000;
+  const MAX_ROWS = 500000; // 安全上限
+  let all = [], from = 0;
+  while (all.length < MAX_ROWS) {
+    const { data, error } = await sb.from('rainfall_observations')
+      .select('station_id,station_name,county_name,town_name,obs_time,past_1hr')
+      .gte('obs_time', start)
+      .lte('obs_time', end)
+      .order('obs_time', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) return null;
+    if (data && data.length > 0) all = all.concat(data);
+    if (!data || data.length < PAGE) break; // 已到最後一頁
+    from += PAGE;
+  }
+  return all;
 }
 
 /* ---- 測試連線 ---- */
