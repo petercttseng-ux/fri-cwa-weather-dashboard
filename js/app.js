@@ -371,54 +371,71 @@ async function calcAccumRainfall(hours) {
       accum24: d.past_24hr >= 0 ? d.past_24hr : 0,
       accum48: d.past_2days >= 0 ? d.past_2days : 0,
     }));
+    renderRainfallRanking(rows, null);
   } else {
-    /* 歷史資料庫：以使用者選擇的時間點往前 hours 小時 */
+    /* 歷史資料庫：同時查詢往前 24h 與 48h 兩段 */
     const endVal = document.getElementById('endTime')?.value;
     if (!endVal) { showToast('請先選擇時間點', 'warning'); return; }
 
-    const endDate   = new Date(endVal);
-    const startDate = new Date(endDate.getTime() - hours * 3600_000);
-    const endISO    = endDate.toISOString();
-    const startISO  = startDate.toISOString();
+    const endDate    = new Date(endVal);
+    const start24    = new Date(endDate.getTime() - 24 * 3600_000);
+    const start48    = new Date(endDate.getTime() - 48 * 3600_000);
+    const endISO     = endDate.toISOString();
 
     const fmtLocal = d => d.toLocaleString('zh-TW', { hour12: false,
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit' });
 
-    showToast(`正在查詢前 ${hours} 小時降雨資料…`);
-    const data = await calcDbRainfallByRange(startISO, endISO);
-    if (!data) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
+    showToast('正在同時查詢前 24 及 48 小時降雨資料…');
 
-    /* 顯示查詢區間、筆數與 CSV 下載 */
-    State.dbRainfallRaw = data;
-    set('dbQueryRange', `${fmtLocal(startDate)} ～ ${fmtLocal(endDate)}`);
-    set('dbQueryCount', data.length.toLocaleString());
+    /* 同時發出兩個查詢 */
+    const [data24, data48] = await Promise.all([
+      calcDbRainfallByRange(start24.toISOString(), endISO),
+      calcDbRainfallByRange(start48.toISOString(), endISO),
+    ]);
+
+    if (!data24 || !data48) { showToast('資料庫查詢失敗或未設定 Supabase', 'danger'); return; }
+
+    /* 顯示兩段查詢區間、筆數 */
+    State.dbRainfallRaw = data48; // CSV 下載給較大的 48h 資料集
+    set('dbQueryRange24', `${fmtLocal(start24)} ～ ${fmtLocal(endDate)}`);
+    set('dbQueryCount24', data24.length.toLocaleString());
+    set('dbQueryRange48', `${fmtLocal(start48)} ～ ${fmtLocal(endDate)}`);
+    set('dbQueryCount48', data48.length.toLocaleString());
     const resultBar = document.getElementById('dbQueryResult');
     if (resultBar) resultBar.style.display = '';
 
-    /* 逐站加總 past_1hr */
-    const byStation = {};
-    data.forEach(r => {
-      if (!byStation[r.station_id]) {
-        byStation[r.station_id] = {
+    /* 逐站加總各段 */
+    const aggStation = (data) => {
+      const map = {};
+      data.forEach(r => {
+        if (!map[r.station_id]) map[r.station_id] = {
           station_id: r.station_id, station_name: r.station_name,
           county_name: r.county_name, town_name: r.town_name, sum: 0,
         };
-      }
-      if (r.past_1hr !== null && +r.past_1hr >= 0) byStation[r.station_id].sum += +r.past_1hr;
+        if (r.past_1hr !== null && +r.past_1hr >= 0) map[r.station_id].sum += +r.past_1hr;
+      });
+      return map;
+    };
+
+    const map24 = aggStation(data24);
+    const map48 = aggStation(data48);
+
+    /* 合併兩段結果 */
+    const allIds = new Set([...Object.keys(map24), ...Object.keys(map48)]);
+    rows = [...allIds].map(id => {
+      const s24 = map24[id] ?? map48[id];
+      const s48 = map48[id] ?? map24[id];
+      return {
+        station_id: s24.station_id, station_name: s24.station_name,
+        county_name: s24.county_name, town_name: s24.town_name,
+        accum24: map24[id]?.sum ?? 0,
+        accum48: map48[id]?.sum ?? 0,
+      };
     });
 
-    /* hours=24 → accum24=sum, accum48=0（只顯示24h表格有意義）
-       hours=48 → accum48=sum, accum24=0（只顯示48h表格有意義）*/
-    rows = Object.values(byStation).map(s => ({
-      station_id: s.station_id, station_name: s.station_name,
-      county_name: s.county_name, town_name: s.town_name,
-      accum24: hours <= 24 ? s.sum : 0,
-      accum48: hours === 48 ? s.sum : 0,
-    }));
+    renderRainfallRanking(rows, 'both');
   }
-
-  renderRainfallRanking(rows, src === 'db' ? hours : null);
 }
 
 function aggByKey(rows, keyFn, v24Fn, v48Fn, nameFields) {
@@ -781,9 +798,8 @@ function initRainfallTab() {
   });
   /* 即時API按鈕 */
   document.getElementById('calcRainfall')?.addEventListener('click', () => calcAccumRainfall(24));
-  /* 歷史資料庫按鈕 */
-  document.getElementById('calc24Rainfall')?.addEventListener('click', () => calcAccumRainfall(24));
-  document.getElementById('calc48Rainfall')?.addEventListener('click', () => calcAccumRainfall(48));
+  /* 歷史資料庫：單一按鈕，同時計算 24h 與 48h */
+  document.getElementById('calcDbRainfall')?.addEventListener('click', () => calcAccumRainfall());
 }
 
 /* ================================================================

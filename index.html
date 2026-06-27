@@ -191,20 +191,15 @@
       </div>
       <div class="filter-group" id="dbCalcGroup" style="display:none">
         <label>&nbsp;</label>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary btn-sm" id="calc24Rainfall">
-            <i class="bi bi-cloud-rain"></i> 24小時降雨量
-          </button>
-          <button class="btn btn-info btn-sm text-white" id="calc48Rainfall">
-            <i class="bi bi-cloud-rain-heavy"></i> 48小時降雨量
-          </button>
-        </div>
+        <button class="btn btn-primary btn-sm" id="calcDbRainfall">
+          <i class="bi bi-calculator"></i> 計算降雨量
+        </button>
       </div>
     </div>
     <!-- 歷史資料庫：查詢結果筆數與 CSV 下載（計算後顯示） -->
-    <div id="dbQueryResult" style="display:none" class="filter-row mt-2 align-items-center gap-3">
-      <span class="text-muted small"><i class="bi bi-clock-history"></i> 查詢區間：<strong id="dbQueryRange">—</strong></span>
-      <span class="text-muted small"><i class="bi bi-database"></i> 取得原始資料：<strong id="dbQueryCount">0</strong> 筆</span>
+    <div id="dbQueryResult" style="display:none" class="filter-row mt-2 align-items-center gap-3 flex-wrap">
+      <span class="text-muted small"><i class="bi bi-cloud-rain"></i> 24h 區間：<strong id="dbQueryRange24">—</strong>（<strong id="dbQueryCount24">0</strong> 筆）</span>
+      <span class="text-muted small"><i class="bi bi-cloud-rain-heavy"></i> 48h 區間：<strong id="dbQueryRange48">—</strong>（<strong id="dbQueryCount48">0</strong> 筆）</span>
       <button class="btn btn-sm btn-outline-success" id="exportDbRainfallCSV">
         <i class="bi bi-download"></i> 下載原始資料 CSV
       </button>
