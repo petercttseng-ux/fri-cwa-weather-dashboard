@@ -762,26 +762,9 @@ function autoCalcRainfallIfApi() {
 }
 
 /* ================================================================
-   資料來源切換（降雨統計頁）
+   降雨統計頁初始化（固定歷史資料庫模式）
    ================================================================ */
 function initRainfallTab() {
-  document.querySelectorAll('input[name="dataSource"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      const isDb = radio.value === 'db';
-      /* 歷史資料庫：顯示時間點選擇與兩個計算按鈕；隱藏即時API按鈕 */
-      document.getElementById('dbRangeGroup').style.display  = isDb ? '' : 'none';
-      document.getElementById('dbCalcGroup').style.display   = isDb ? '' : 'none';
-      document.getElementById('apiCalcGroup').style.display  = isDb ? 'none' : '';
-      /* 隱藏上次查詢結果列 */
-      const resultBar = document.getElementById('dbQueryResult');
-      if (resultBar) resultBar.style.display = 'none';
-      /* 切回即時API時自動計算 */
-      if (!isDb) autoCalcRainfallIfApi();
-    });
-  });
-  /* 即時API按鈕 */
-  document.getElementById('calcRainfall')?.addEventListener('click', () => calcAccumRainfall(24));
-  /* 歷史資料庫：單一按鈕，同時計算 24h 與 48h */
   document.getElementById('calcDbRainfall')?.addEventListener('click', () => calcAccumRainfall());
 }
 

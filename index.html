@@ -170,29 +170,16 @@
   <!-- 時間區段選擇 -->
   <div class="card-panel filter-panel">
     <div class="filter-row">
+      <!-- 固定歷史資料庫模式 -->
+      <input type="radio" name="dataSource" id="srcDB" value="db" checked style="display:none" />
       <div class="filter-group">
-        <label>資料來源</label>
-        <div class="btn-group" role="group">
-          <input type="radio" class="btn-check" name="dataSource" id="srcAPI" value="api" checked />
-          <label class="btn btn-outline-primary btn-sm" for="srcAPI">即時API</label>
-          <input type="radio" class="btn-check" name="dataSource" id="srcDB" value="db" />
-          <label class="btn btn-outline-primary btn-sm" for="srcDB">歷史資料庫</label>
-        </div>
-      </div>
-      <!-- 即時API：原有計算按鈕 -->
-      <div class="filter-group" id="apiCalcGroup">
-        <label>&nbsp;</label>
-        <button class="btn btn-primary btn-sm" id="calcRainfall"><i class="bi bi-calculator"></i> 計算累積降雨量</button>
-      </div>
-      <!-- 歷史資料庫：時間點選擇 + 兩個計算按鈕 -->
-      <div class="filter-group" id="dbRangeGroup" style="display:none">
         <label>選擇時間點</label>
         <input type="datetime-local" id="endTime" class="form-control form-control-sm" />
       </div>
-      <div class="filter-group" id="dbCalcGroup" style="display:none">
+      <div class="filter-group">
         <label>&nbsp;</label>
         <button class="btn btn-primary btn-sm" id="calcDbRainfall">
-          <i class="bi bi-calculator"></i> 計算降雨量
+          <i class="bi bi-calculator"></i> 計算24h及48h降雨量
         </button>
       </div>
     </div>
